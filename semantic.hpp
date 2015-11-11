@@ -24,6 +24,7 @@ using Proc=Procedure;
 class Statement{
 public:
     virtual void translate(const Proc*)const=0;
+    virtual void print(int lv)const=0;
     virtual ~Statement(){}
 };
 using Stat=Statement;
@@ -105,6 +106,29 @@ public:
 
         for(auto it=procs.begin();it!=procs.end();++it)
             (*it)->translate();
+    }
+    void print(int lv)const
+    {
+        std::cout<<name<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Vars:";
+        for(auto&x:vars)
+            std::cout<<x<<',';
+        std::cout<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Defs:";
+        for(auto&x:defs)
+            std::cout<<x.first<<":="<<x.second<<',';
+        std::cout<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Statement:";
+        stat->print(lv+1);
+        for(auto&x:procs)
+        {
+            for(int i=0;i<lv;++i)std::cout<<'\t';
+            std::cout<<"Proc:";
+            x->print(lv+1);
+        }
     }
 };
 class MainProc:public Proc
@@ -293,6 +317,26 @@ public:
         rhs->translate(proc);
         VM::write({I::OPR,0,opr});
     }
+    void print(int lv)const
+    {
+        constexpr static const char* opr_names[]
+        {
+            "NEG",
+            "ADD","SUB",
+            "MUL","DIV",
+
+            "EQ","NE",
+            "GT","GE",
+            "LT","LE"
+        };
+        std::cout<<opr_names[opr]<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"LHS:";
+        lhs->print(lv+1);
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"RHS:";
+        rhs->print(lv+1);
+    }
 };
 using Cond=Condition;
 
@@ -309,6 +353,16 @@ public:
         auto pair=proc->find_var(id);
         VM::write({I::STO,pair.first,pair.second});
     }
+    void print(int lv)const
+    {
+        std::cout<<"Assign"<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Ident:"<<id<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Expression:";
+        expr->print(lv+1);
+        std::cout<<std::endl;
+    }
 };
 class CompoundStat:public Stat
 {
@@ -322,6 +376,17 @@ public:
     {
         for(auto it=stats.begin();it!=stats.end();++it)
             (*it)->translate(proc);
+    }
+    void print(int lv)const
+    {
+        std::cout<<"Compound"<<std::endl;
+        for(auto&x:stats)
+        {
+            for(int i=0;i<lv;++i)std::cout<<'\t';
+            std::cout<<"Statement:";
+            x->print(lv+1);
+        }
+        std::cout<<std::endl;
     }
 
 };
@@ -339,6 +404,16 @@ public:
         stat->translate(proc);
         inst->a=VM::code_pos();
     }
+    void print(int lv)const
+    {
+        std::cout<<"If"<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Condition:";
+        cond->print(lv+1);
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Statement:";
+        stat->print(lv+1);
+    }
 };
 class CallStat:public Stat
 {
@@ -348,6 +423,10 @@ public:
     void translate(const Proc*proc)const
     {
         proc->find_proc(id,VM::write({I::CAL,0,0}));
+    }
+    void print(int)const
+    {
+        std::cout<<"Call "<<id<<std::endl;
     }
 };
 class WhileStat:public Stat
@@ -365,6 +444,16 @@ public:
         stat->translate(proc);
         VM::write({I::JMP,0,pos});
         inst->a=VM::code_pos();
+    }
+    void print(int lv)const
+    {
+        std::cout<<"While"<<std::endl;
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Condition:";
+        cond->print(lv+1);
+        for(int i=0;i<lv;++i)std::cout<<'\t';
+        std::cout<<"Statement:";
+        stat->print(lv+1);
     }
 };
 }

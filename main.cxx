@@ -13,9 +13,11 @@ using namespace syntax;
 
 #include "reader.hpp"
 
-int main()
+int main(int argc,char**argv)
 {
-    Reader rd("src");
+    const char*path="src";
+    if(argc>1)path=argv[1];
+    Reader rd(path);
     any val=main_proc.match(rd);
     if(val.empty())
     {
@@ -23,8 +25,10 @@ int main()
         return 0;
     }
     auto proc=any_cast<MainProc*>(val);
+    proc->print(0);
     proc->translate();
     VM::print();
+    delete proc;
 
     return 0;
 }
