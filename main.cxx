@@ -1,12 +1,8 @@
 #include "vm.hpp"
 using namespace vm;
 
-Instruction VM::code[CODE_MAX];
-int VM::code_len;
-
 #include "semantic.hpp"
 using namespace semantic;
-MainProc::VirtualProc MainProc::vproc;
 
 #include "syntax.hpp"
 using namespace syntax;

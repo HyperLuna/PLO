@@ -319,17 +319,7 @@ public:
     }
     void print(int lv)const
     {
-        constexpr static const char* opr_names[]
-        {
-            "NEG",
-            "ADD","SUB",
-            "MUL","DIV",
-
-            "EQ","NE",
-            "GT","GE",
-            "LT","LE"
-        };
-        std::cout<<opr_names[opr]<<std::endl;
+        std::cout<<VM::opr_names[opr]<<std::endl;
         for(int i=0;i<lv;++i)std::cout<<'\t';
         std::cout<<"LHS:";
         lhs->print(lv+1);

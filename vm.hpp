@@ -116,26 +116,11 @@ public:
     }
     static int code_pos(){return code_len;} 
 
+    static const char*fun_names[];
+    static const char*opr_names[];
+
     static void print()
     {
-        constexpr static const char* fun_names[]
-        {
-            "NOP",
-            "LIT","LOD","STO",
-            "CAL","RET","INT",
-            "JMP","JPC",
-            "OPR"
-        };
-        constexpr static const char* opr_names[]
-        {
-            "NEG",
-            "ADD","SUB",
-            "MUL","DIV",
-
-            "EQ","NE",
-            "GT","GE",
-            "LT","LE"
-        };
         for(int i=0;i<code_len;++i)
         {
             std::cout<<i<<'\t';
