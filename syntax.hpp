@@ -1,6 +1,9 @@
 #ifndef SYNTAX_H
 #define SYNTAX_H
 
+#include "writer.hpp"
+extern Writer log_syn;
+
 #include<initializer_list>
 #include<forward_list>
 #include<functional>
@@ -10,6 +13,7 @@
 using std::pair;
 using std::vector;
 using std::string;
+using std::to_string;
 using std::function;
 template<class T>
 using ilist=std::initializer_list<T>;
@@ -39,6 +43,7 @@ class Token:public E
 public:
     any match(Reader&)const
     {
+        log_syn.write("Token");
         return (E*)this;
     }
 };
@@ -62,20 +67,30 @@ public:
     {
         rd.skip();
         auto pos=rd.tell();
+        string out="Keyword:"+kw+" ";
         for(auto it=kw.begin();it!=kw.end();++it)
         {
             if(*it!=rd.read())
             {
                 rd.seek(pos);
+                out+="Failed";
+                log_syn.write(out);
                 return any();
             }
         }
         if(ns&&rd.read()!=0)
         {
             rd.seek(pos);
+            out+="Failed";
+            log_syn.write(out);
             return any();
         }
-        else return (E*)this;
+        else
+        {
+            out+="Succeed";
+            log_syn.write(out);
+            return (E*)this;
+        }
     }
     Keyword(string keyword,bool need_space=false):kw(keyword),ns(need_space){}
 };
@@ -89,12 +104,21 @@ public:
     {
         rd.skip();
         auto pos=rd.tell();
+        log_syn.write("First");
+        log_syn.inc();
         for(auto&x:list)
         {
             any r=x->match(rd);
-            if(!r.empty())return r;
+            if(!r.empty())
+            {
+                log_syn.dec();
+                log_syn.write("First Succeed");
+                return r;
+            }
             rd.seek(pos);
         }
+        log_syn.dec();
+        log_syn.write("First Failed");
         return any();
     }
 };
@@ -107,9 +131,21 @@ public:
     any match(Reader&rd)const
     {
         extern Token empty;
+        log_syn.write("Optional");
+        log_syn.inc();
         any r=expr->match(rd);
-        if(!r.empty())return r;
-        else return (E*)&empty;
+        if(!r.empty())
+        {
+            log_syn.dec();
+            log_syn.write("Optional Over");
+            return r;
+        }
+        else
+        {
+            log_syn.dec();
+            log_syn.write("Optional Over");
+            return (E*)&empty;
+        }
     }
 };
 class Sequence:public E
@@ -123,6 +159,8 @@ public:
     {
         rd.skip();
         auto pos=rd.tell();
+        log_syn.write("Sequence");
+        log_syn.inc();
         vector<any>vec;
         for(auto it=list.begin();it!=list.end();++it)
         {
@@ -134,6 +172,7 @@ public:
             }
             vec.push_back(r);
         }
+        log_syn.dec();
         return fn(vec);
     }
 };
@@ -148,6 +187,7 @@ public:
         function<any(const vector<any>&)>fn=
         [](const vector<any>&vec)->any
         {
+            log_syn.write("Repeat:"+to_string(vec.size()));
             return vec;
         },int max=1000000)
         :max(max),fn(fn),expr(expr){}
@@ -155,6 +195,8 @@ public:
     {
         rd.skip();
         auto pos=rd.tell();
+        log_syn.write("Repeat");
+        log_syn.inc();
         vector<any>vec;
         for(int i=0;i<max;++i)
         {
@@ -162,6 +204,7 @@ public:
             if(r.empty())break;
             vec.push_back(r);
         }
+        log_syn.dec();
         any t=fn(vec);
         if(t.empty())rd.seek(pos);
         return t;
@@ -174,6 +217,7 @@ public:
         function<any(const vector<any>&)>fn=
         [](const vector<any>&vec)->any
         {
+            log_syn.write("Repeat:"+to_string(vec.size()));
             return vec;
         },int max=1000000)
         :Repeat(new Sequence(list,seq_fn),fn,max){}

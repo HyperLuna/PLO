@@ -8,6 +8,8 @@ using namespace semantic;
 using namespace syntax;
 
 #include "reader.hpp"
+#include "writer.hpp"
+Writer log_syn("syn");
 
 int main(int argc,char**argv)
 {
