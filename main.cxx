@@ -9,7 +9,7 @@ using namespace syntax;
 
 #include "reader.hpp"
 #include "writer.hpp"
-Writer log_syn("syn");
+Writer log_syn("src.syn");
 
 int main(int argc,char**argv)
 {

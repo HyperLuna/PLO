@@ -129,7 +129,7 @@ RepeatSequence expr_rep_mul_div_factor({&opr_mul_div,&expr_factor},
 
             log_syn.write("Sequence:expr_mul_div_factor Succeed");
             return std::make_pair(
-                    any_cast<E*>(vec[0]),
+                    any_cast<Parser*>(vec[0]),
                     any_cast<Expr*>(vec[1]));
         },
         [](const vector<any>&vec)->any
@@ -162,7 +162,7 @@ Sequence expr_mul_div({&expr_factor,&expr_rep_mul_div_factor},
             auto v=any_cast<vector<any>>(vec[1]);
             for(auto it=v.begin();it!=v.end();++it)
             {
-                auto pr=any_cast<pair<E*,Expr*>>(*it);
+                auto pr=any_cast<pair<Parser*,Expr*>>(*it);
                 if(pr.first==&kw_mul)ptr->mul(pr.second);
                 else ptr->div(pr.second);
             }
@@ -181,7 +181,7 @@ RepeatSequence expr_rep_add_sub_item({&opr_add_sub,&expr_item},
 
             log_syn.write("Sequence:expr_add_sub_item Succeed");
             return std::make_pair(
-                    any_cast<E*>(vec[0]),
+                    any_cast<Parser*>(vec[0]),
                     any_cast<Expr*>(vec[1]));
         });
 Sequence expr_add_sub({&opt_add_sub,&expr_item,&expr_rep_add_sub_item},
@@ -200,7 +200,7 @@ Sequence expr_add_sub({&opt_add_sub,&expr_item,&expr_rep_add_sub_item},
             }
 
             auto ptr=new AddSubExpr();
-            E* p=any_cast<E*>(vec[0]);
+            Parser* p=any_cast<Parser*>(vec[0]);
             auto v=any_cast<vector<any>>(vec[2]);
             if(p==&kw_sub)
                 ptr->sub(any_cast<Expr*>(vec[1]));
@@ -219,7 +219,7 @@ Sequence expr_add_sub({&opt_add_sub,&expr_item,&expr_rep_add_sub_item},
             }
             for(auto it=v.begin();it!=v.end();++it)
             {
-                auto pr=any_cast<pair<E*,Expr*>>(*it);
+                auto pr=any_cast<pair<Parser*,Expr*>>(*it);
                 if(pr.first==&kw_add)ptr->add(pr.second);
                 else ptr->sub(pr.second);
             }
@@ -249,7 +249,7 @@ Sequence cond({&expr,&opr_cond,&expr},
                 return any();
             }
 
-            auto p=any_cast<E*>(vec[1]);
+            auto p=any_cast<Parser*>(vec[1]);
             log_syn.write("Sequence:cond Succeed");
             if(&kw_eq==p)return new Cond(
                     any_cast<Expr*>(vec[0]),any_cast<Expr*>(vec[2]),I::EQ);

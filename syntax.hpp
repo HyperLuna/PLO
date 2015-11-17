@@ -30,25 +30,26 @@ using namespace semantic;
 
 namespace syntax
 {
-class Expression
+class Parser
 {
+protected:
+    //umap<pos_t,any>cache;
 public:
     virtual any match(Reader&)const=0;
-    virtual ~Expression(){};
+    virtual ~Parser(){};
 };
-using E=Expression;
 
-class Token:public E
+class Token:public Parser
 {
 public:
     any match(Reader&)const
     {
         log_syn.write("Token");
-        return (E*)this;
+        return (Parser*)this;
     }
 };
 
-class That:public E
+class That:public Parser
 {
     function<any(Reader&)>fn;
 public:
@@ -58,7 +59,7 @@ public:
     }
     That(function<any(Reader&)>fn):fn(fn){}
 };
-class Keyword:public E
+class Keyword:public Parser
 {
     string kw;
     bool ns;
@@ -89,17 +90,17 @@ public:
         {
             out+="Succeed";
             log_syn.write(out);
-            return (E*)this;
+            return (Parser*)this;
         }
     }
     Keyword(string keyword,bool need_space=false):kw(keyword),ns(need_space){}
 };
 
-class First:public E
+class First:public Parser
 {
-    flist<E*>list;
+    flist<Parser*>list;
 public:
-    First(ilist<E*>list):list(list){}
+    First(ilist<Parser*>list):list(list){}
     any match(Reader&rd)const
     {
         rd.skip();
@@ -123,11 +124,11 @@ public:
     }
 };
 
-class Optional:public E
+class Optional:public Parser
 {
-    E* expr;
+    Parser* expr;
 public:
-    Optional(E*expr):expr(expr){}
+    Optional(Parser*expr):expr(expr){}
     any match(Reader&rd)const
     {
         extern Token empty;
@@ -144,16 +145,16 @@ public:
         {
             log_syn.dec();
             log_syn.write("Optional Over");
-            return (E*)&empty;
+            return (Parser*)&empty;
         }
     }
 };
-class Sequence:public E
+class Sequence:public Parser
 {
-    flist<E*>list;
+    flist<Parser*>list;
     function<any(const vector<any>&)>fn;
 public:
-    Sequence(ilist<E*>list,function<any(const vector<any>&)>fn)
+    Sequence(ilist<Parser*>list,function<any(const vector<any>&)>fn)
         :list(list),fn(fn){}
     any match(Reader&rd)const
     {
@@ -176,14 +177,14 @@ public:
         return fn(vec);
     }
 };
-class Repeat:public E
+class Repeat:public Parser
 {
     int max;
     function<any(const vector<any>&)>fn;
 protected:
-    E* expr;
+    Parser* expr;
 public:
-    Repeat(E*expr,
+    Repeat(Parser*expr,
         function<any(const vector<any>&)>fn=
         [](const vector<any>&vec)->any
         {
@@ -213,7 +214,7 @@ public:
 class RepeatSequence:public Repeat
 {
 public:
-    RepeatSequence(ilist<E*>list,function<any(const vector<any>&)>seq_fn,
+    RepeatSequence(ilist<Parser*>list,function<any(const vector<any>&)>seq_fn,
         function<any(const vector<any>&)>fn=
         [](const vector<any>&vec)->any
         {

@@ -2,7 +2,6 @@
 #define READER_H
 
 #include<experimental/any>
-#include<unordered_map>
 #include<fstream>
 #include<string>
 #include<cctype>
@@ -12,14 +11,11 @@ using std::ifstream;
 using std::experimental::any;
 using std::experimental::any_cast;
 using pos_t=ifstream::pos_type;
-template<class K,class T>
-using umap=std::unordered_map<K,T>;
 
 class Reader
 {
     ifstream ifile;
     char last=0;
-    //umap<pos_t,any>cache;
 public:
     Reader(const string&path):ifile(path){}
     ~Reader()
