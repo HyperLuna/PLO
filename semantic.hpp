@@ -21,15 +21,19 @@ namespace semantic
 {
 class Procedure;
 using Proc=Procedure;
-class Statement{
+class SAT
+{
 public:
+    virtual ~SAT(){}
     virtual void translate(const Proc*)const=0;
     virtual void print(int lv)const=0;
-    virtual ~Statement(){}
+    virtual bool check(){return true;}
+    virtual void optimize(){};
 };
+class Statement:public SAT{};
 using Stat=Statement;
 
-class Procedure
+class Procedure:public SAT
 {
     mutable int code_pos=-1;
     mutable flist<I*>calls;
@@ -93,8 +97,7 @@ public:
             }
         return prev->find_proc(name,inst);
     }
-
-    virtual void translate()const
+    virtual void translate(const Proc*)const
     {
         code_pos=VM::code_pos();
         if(var_len)VM::write({I::INT,0,var_len});
@@ -105,7 +108,7 @@ public:
             calls.front()->a=code_pos;
 
         for(auto it=procs.begin();it!=procs.end();++it)
-            (*it)->translate();
+            (*it)->translate(nullptr);
     }
     void print(int lv)const
     {
@@ -149,7 +152,7 @@ class MainProc:public Proc
         {
             inst->a=0;
         }
-        void translate()const
+        virtual void translate(const Proc*)const
         {
             VM::write({I::JMP,0,0});
         }
@@ -161,19 +164,16 @@ public:
     }
     void translate()const
     {
-        vproc.translate();
-        Proc::translate();
+        translate(nullptr);
+    }
+    virtual void translate(const Proc*)const
+    {
+        vproc.translate(nullptr);
+        Proc::translate(nullptr);
     }
 };
 
-class Expression
-{
-public:
-    virtual void translate(const Proc*)const=0;
-    virtual void print(int)const=0;
-    virtual bool check()const{return true;}
-    virtual ~Expression(){}
-};
+class Expression:public SAT{};
 using Expr=Expression;
 
 class IntExpr:public Expr
@@ -181,11 +181,11 @@ class IntExpr:public Expr
     int num;
 public:
     IntExpr(int num):num(num){}
-    void translate(const Proc*)const
+    virtual void translate(const Proc*)const
     {
         VM::write({I::LIT,0,num});
     }
-    void print(int)const
+    virtual void print(int)const
     {
         std::cout<<"Int "<<num<<std::endl;
     }
@@ -196,7 +196,7 @@ class IdentExpr:public Expr
     string name;
 public:
     IdentExpr(string name):name(name){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         auto pair=proc->find_val(name);
         if(pair.first<0)
@@ -204,7 +204,7 @@ public:
         else 
             VM::write({I::LOD,pair.first,pair.second});
     }
-    void print(int)const
+    virtual void print(int)const
     {
         std::cout<<"Ident "<<name<<std::endl;
     }
@@ -222,7 +222,7 @@ public:
     {
         subs.push_front(unique_ptr<Expr>(expr));
     }
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         auto it=adds.begin();
         if(it!=adds.end())
@@ -242,7 +242,7 @@ public:
             VM::write({I::OPR,0,I::SUB});
         }
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"AddSubExpr"<<std::endl;
         for(auto&x:adds)
@@ -272,7 +272,7 @@ public:
     {
         divs.push_front(unique_ptr<Expr>(expr));
     }
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         auto it=muls.begin();
         (*it)->translate(proc);
@@ -287,7 +287,7 @@ public:
             VM::write({I::OPR,0,I::DIV});
         }
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"MulDivExpr"<<std::endl;
         for(auto&x:muls)
@@ -304,20 +304,20 @@ public:
         }
     }
 };
-class Condition
+class Condition:public SAT
 {
     unique_ptr<Expr>lhs,rhs;
     int opr;
 public:
     Condition(Expr*lhs,Expr*rhs,int opr)
         :lhs(lhs),rhs(rhs),opr(opr){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         lhs->translate(proc);
         rhs->translate(proc);
         VM::write({I::OPR,0,opr});
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<VM::opr_names[opr]<<std::endl;
         for(int i=0;i<lv;++i)std::cout<<'\t';
@@ -337,13 +337,13 @@ class AssignStat:public Stat
 public:
     AssignStat(string ident,Expr*expr)
         :id(ident),expr(expr){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         expr->translate(proc);
         auto pair=proc->find_var(id);
         VM::write({I::STO,pair.first,pair.second});
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"Assign"<<std::endl;
         for(int i=0;i<lv;++i)std::cout<<'\t';
@@ -362,12 +362,12 @@ public:
     {
         stats.emplace_back(stat);
     }
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         for(auto it=stats.begin();it!=stats.end();++it)
             (*it)->translate(proc);
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"Compound"<<std::endl;
         for(auto&x:stats)
@@ -387,14 +387,14 @@ class IfStat:public Stat
 public:
     IfStat(Cond*cond,Stat*stat)
         :cond(cond),stat(stat){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         cond->translate(proc);
         I* inst=VM::write({I::JPC,0,0});
         stat->translate(proc);
         inst->a=VM::code_pos();
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"If"<<std::endl;
         for(int i=0;i<lv;++i)std::cout<<'\t';
@@ -410,11 +410,11 @@ class CallStat:public Stat
     string id;
 public:
     CallStat(string ident):id(ident){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         proc->find_proc(id,VM::write({I::CAL,0,0}));
     }
-    void print(int)const
+    virtual void print(int)const
     {
         std::cout<<"Call "<<id<<std::endl;
     }
@@ -426,7 +426,7 @@ class WhileStat:public Stat
 public:
     WhileStat(Cond*cond,Stat*stat)
         :cond(cond),stat(stat){}
-    void translate(const Proc*proc)const
+    virtual void translate(const Proc*proc)const
     {
         int pos=VM::code_pos();
         cond->translate(proc);
@@ -435,7 +435,7 @@ public:
         VM::write({I::JMP,0,pos});
         inst->a=VM::code_pos();
     }
-    void print(int lv)const
+    virtual void print(int lv)const
     {
         std::cout<<"While"<<std::endl;
         for(int i=0;i<lv;++i)std::cout<<'\t';
