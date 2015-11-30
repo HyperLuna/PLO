@@ -7,6 +7,8 @@ using namespace semantic;
 #include "syntax.hpp"
 using namespace syntax;
 
+extern Sequence main_proc;
+
 #include "reader.hpp"
 #include "writer.hpp"
 Writer log_syn("src.syn");

@@ -227,8 +227,6 @@ public:
         delete expr;
     }
 };
-
-extern Sequence main_proc;
 }
 
 #endif
